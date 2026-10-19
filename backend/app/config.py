@@ -22,7 +22,8 @@ class Settings(BaseSettings):
 
     cors_origins: str = (
         "http://localhost:3000,"
-        "https://dhan-rakshak-agentic-fraud-detectio.vercel.app/"
+"http://localhost:5173,"
+"https://dhan-rakshak-agentic-fraud-detectio.vercel.app"
     )
     enable_dev_endpoints: bool = False
     auto_score_on_sync: bool = False
