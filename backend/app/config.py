@@ -20,7 +20,10 @@ class Settings(BaseSettings):
     groq_api_key: str
     groq_model: str = "openai/gpt-oss-120b"
 
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = (
+        "http://localhost:3000,"
+        "https://dhan-rakshak-agentic-fraud-detectio.vercel.app/"
+    )
     enable_dev_endpoints: bool = False
     auto_score_on_sync: bool = False
     risk_llm_timeout_seconds: float = 20.0

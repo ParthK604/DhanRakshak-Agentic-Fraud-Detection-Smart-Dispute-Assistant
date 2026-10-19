@@ -11,7 +11,10 @@ export type PrecheckResponse = components["schemas"]["PrecheckResponse"];
 export type ChatResponse = components["schemas"]["ChatResponse"];
 
 export const demoUserId = process.env.NEXT_PUBLIC_DEMO_USER_ID ?? "demo-user-1";
-const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
+const baseUrl = (
+  process.env.NEXT_PUBLIC_API_BASE_URL
+  ?? "https://dhanrakshak-agentic-fraud-detection.onrender.com"
+).replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(public readonly status: number, public readonly detail: string) {
