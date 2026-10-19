@@ -1,0 +1,22 @@
+# Python
+backend/venv/
+backend/__pycache__/
+*.pyc
+
+# Env files
+backend/.env
+frontend/.env.local
+
+# Uploaded PDFs
+uploads/
+
+# Next.js
+frontend/node_modules/
+frontend/.next/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+

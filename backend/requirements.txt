@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+motor
+httpx
+groq
+langgraph
+langchain-groq
+paypal-server-sdk
