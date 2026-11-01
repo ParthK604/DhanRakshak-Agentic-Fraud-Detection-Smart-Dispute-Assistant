@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.agents.risk_graph import score_transaction
 from app.models.schemas import (
@@ -18,6 +18,7 @@ from app.models.schemas import (
 from app.repositories import risk_scores
 from app.repositories import transactions as transaction_repository
 from app.services.features import build_context, combine_rules_score, compute_signals, risk_level
+from app.services.rate_limit import enforce_rate_limit
 
 router = APIRouter(prefix="/api/risk", tags=["risk"])
 
@@ -39,7 +40,7 @@ async def debug_signals(txn_id: str) -> RiskSignalsResponse:
     return RiskSignalsResponse(txn_id=txn_id, signals=signals, rules_score=score, risk_level=risk_level(score), context=build_context(txn, history))
 
 
-@router.post("/score", response_model=RiskAssessment)
+@router.post("/score", response_model=RiskAssessment, dependencies=[Depends(enforce_rate_limit)])
 async def score_existing(request: ScoreRequest) -> RiskAssessment:
     cached = await risk_scores.get(request.txn_id)
     if cached and not request.force:
@@ -50,14 +51,14 @@ async def score_existing(request: ScoreRequest) -> RiskAssessment:
     return await score_transaction(txn)
 
 
-@router.post("/score-transaction", response_model=RiskAssessment)
+@router.post("/score-transaction", response_model=RiskAssessment, dependencies=[Depends(enforce_rate_limit)])
 async def score_incoming(transaction: IncomingTransaction) -> RiskAssessment:
     txn = Transaction(**transaction.model_dump(), source="simulated")
     await transaction_repository.upsert_many([txn])
     return await score_transaction(txn)
 
 
-@router.post("/score-batch", response_model=BatchScoreResult)
+@router.post("/score-batch", response_model=BatchScoreResult, dependencies=[Depends(enforce_rate_limit)])
 async def score_batch(request: BatchScoreRequest) -> BatchScoreResult:
     rows, _ = await transaction_repository.list_transactions(
         {"user_id": request.user_id}, 1, request.limit, ("timestamp", 1)

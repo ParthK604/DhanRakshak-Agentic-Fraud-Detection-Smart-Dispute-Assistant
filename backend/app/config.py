@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     search_api_key: str | None = None
     merchant_cache_hours: int = 24
     merchant_unknown_confidence_floor: float = 0.3
+    health_cache_seconds: int = 45
+    rate_limit_per_minute: int = 30
 
     @property
     def cors_origin_list(self) -> list[str]:

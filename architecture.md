@@ -14,7 +14,7 @@ DhanRakshak-.../
 │   │   ├── config.py         [x] Settings via pydantic-settings
 │   │   ├── db.py             [x] Motor client, get_db(), ping
 │   │   ├── routers/
-│   │   │   ├── health.py     [x] GET /api/health (PayPal, Mongo, Groq checks)
+│   │   │   ├── health.py     [x] GET /healthz and cached /api/health checks
 │   │   │   ├── transactions.py [x] Phase 2
 │   │   │   ├── risk.py       [x] Phase 3
 │   │   │   ├── disputes.py   [x] Phase 4
@@ -44,10 +44,11 @@ DhanRakshak-.../
 │   ├── lib/api.ts            [x] typed API client and ApiError
 │   ├── lib/api-types.ts      [x] generated from backend OpenAPI
 │   └── lib/ag-grid.ts        [x] Community module registration and shared theme
-├── postman/                  [ ] collection + environment (Phase 7)
-├── render.yaml               [ ] Phase 7
+├── postman/                  [x] collection, environments, README (Phase 7B)
+├── render.yaml               [x] Render Blueprint (Phase 7B)
+├── docs/RENDER.md            [x] deployment and validation guide
 ├── LICENSE                   [x] MIT
-└── README.md                 [ ] Phase 8
+└── README.md                 [x] deployment hooks
 ```
 
 ## Planned Mongo collections
@@ -58,7 +59,7 @@ DhanRakshak-.../
   cache expiry, LLM/fallback metadata; unique merchant_id, trust_score, updated_at desc
 
 ## Planned API surface
-- GET  /api/health
+- GET  /healthz, GET /api/health
 - GET  /api/transactions, GET /api/transactions/{txn_id}, POST /api/transactions/sync
 - POST /api/transactions/seed and POST /api/transactions/seed/reset (development only)
 - POST /api/risk/signals (development/debug, deterministic only)
@@ -109,7 +110,16 @@ DhanRakshak-.../
   safe_fetch only; fixture mode is offline and page text is untrusted data.
 
 ## Env vars
-PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_BASE_URL, MONGODB_URI (or MONGO_URI), MONGODB_DB, GROQ_API_KEY, GROQ_MODEL, CORS_ORIGINS, ENABLE_DEV_ENDPOINTS, AUTO_SCORE_ON_SYNC, RISK_LLM_TIMEOUT_SECONDS, DISPUTE_SUBMISSION_MODE, MERCHANT_RESEARCH_MODE, SEARCH_PROVIDER, SEARCH_API_KEY, MERCHANT_CACHE_HOURS, MERCHANT_UNKNOWN_CONFIDENCE_FLOOR
+PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_BASE_URL, MONGODB_URI (or MONGO_URI), MONGODB_DB, GROQ_API_KEY, GROQ_MODEL, CORS_ORIGINS, ENABLE_DEV_ENDPOINTS, AUTO_SCORE_ON_SYNC, RISK_LLM_TIMEOUT_SECONDS, DISPUTE_SUBMISSION_MODE, MERCHANT_RESEARCH_MODE, SEARCH_PROVIDER, SEARCH_API_KEY, MERCHANT_CACHE_HOURS, MERCHANT_UNKNOWN_CONFIDENCE_FLOOR, HEALTH_CACHE_SECONDS, RATE_LIMIT_PER_MINUTE
+
+`/api/health` caches service checks for `HEALTH_CACHE_SECONDS` (45 by default)
+and uses a Groq models-list credential check rather than a completion. The
+LLM-heavy POST routes use the in-memory sliding-window limiter in
+`app/services/rate_limit.py`, keyed by the first `X-Forwarded-For` hop because
+Render is the trusted reverse proxy. Deployment is Vercel -> Render FastAPI ->
+MongoDB Atlas, with PayPal sandbox and Groq as external services. The optional
+`backend/scripts/nightly_maintenance.py` job is disabled because Render cron
+jobs do not have a free tier.
 
 Risk indexes: unique `risk_scores.txn_id` and `(user_id, created_at desc)`.
 Dispute indexes: unique `disputes.dispute_id`, `(user_id, created_at desc)`,

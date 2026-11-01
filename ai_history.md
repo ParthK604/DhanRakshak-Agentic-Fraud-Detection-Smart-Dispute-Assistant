@@ -83,3 +83,17 @@ Before you stop (or run out of tokens), append an entry below: what you did, fil
   the frontend's `NEXT_PUBLIC_API_BASE_URL` to the deployed backend URL and
   `NEXT_PUBLIC_DEMO_USER_ID` to the demo account; then optionally evaluate
   APIMatic. Re-run OpenAPI generation after any deployed contract change.
+
+## Entry 7: Copilot SDK in VS Code, Phase 7B production hardening
+- Tool: Copilot SDK in VS Code with local PowerShell validation.
+- Changed: backend health/config/router/LLM files, new rate limiter and
+  maintenance script, the OpenAPI-driven Postman generator and collection,
+  Render Blueprint/docs, deployment README hooks, and project memory docs.
+- Implemented the liveness route, cached health checks, models-list credential
+  validation, endpoint quotas, frontend 429 messaging, Render configuration,
+  optional maintenance job, and Postman environments. APIMatic was dropped.
+- Half-done: live Render/Vercel configuration and Postman Runner results require
+  owner credentials and cannot be verified locally.
+- Exact Phase 8 next steps: finish the README beyond deployment hooks, record
+  the demo video, write the Devpost entry, review trademarked seed merchant
+  names, and run final end-to-end tests against the live URLs.

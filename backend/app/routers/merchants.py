@@ -1,7 +1,7 @@
 import asyncio
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.agents.merchant_graph import score_merchant
 from app.models.merchant import (
@@ -16,6 +16,7 @@ from app.services.merchant_internal import internal_signals, merchant_id
 from app.services.merchant_research import research_merchant
 from app.services.merchant_scoring import level_for, score_signals
 from app.config import get_settings
+from app.services.rate_limit import enforce_rate_limit
 
 router = APIRouter(prefix="/api/merchants", tags=["merchants"])
 
@@ -37,7 +38,7 @@ async def merchant_signals(request: TrustRequest) -> dict[str, object]:
     }
 
 
-@router.post("/trust", response_model=TrustAssessment)
+@router.post("/trust", response_model=TrustAssessment, dependencies=[Depends(enforce_rate_limit)])
 async def trust(request: TrustRequest) -> TrustAssessment:
     cached = await merchants.get(merchant_id(request.merchant_name))
     if cached and not request.refresh and cached.expires_at > datetime.now(UTC):
@@ -45,7 +46,7 @@ async def trust(request: TrustRequest) -> TrustAssessment:
     return await score_merchant(request.merchant_name, request.merchant_url, request.user_id)
 
 
-@router.post("/precheck", response_model=PrecheckResponse)
+@router.post("/precheck", response_model=PrecheckResponse, dependencies=[Depends(enforce_rate_limit)])
 async def precheck(request: PrecheckRequest) -> PrecheckResponse:
     trust_assessment = await score_merchant(request.merchant_name, request.merchant_url, request.user_id)
     rows, _ = await transactions.list_transactions({"user_id": request.user_id}, 1, 500, ("timestamp", 1))
@@ -76,7 +77,7 @@ async def precheck(request: PrecheckRequest) -> PrecheckResponse:
     )
 
 
-@router.post("/trust-batch", response_model=list[TrustAssessment])
+@router.post("/trust-batch", response_model=list[TrustAssessment], dependencies=[Depends(enforce_rate_limit)])
 async def trust_batch(merchants_input: list[str] | str) -> list[TrustAssessment]:
     if merchants_input == "all seeded":
         rows, _ = await transactions.list_transactions({}, 1, 10000, ("timestamp", 1))

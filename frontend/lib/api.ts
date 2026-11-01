@@ -34,7 +34,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const detail = typeof body.detail === "string" ? body.detail : "The API returned an unexpected error.";
+      const detail = response.status === 429
+        ? "AI request limit reached. Please wait a moment and try again."
+        : typeof body.detail === "string" ? body.detail : "The API returned an unexpected error.";
       throw new ApiError(response.status, detail);
     }
     return body as T;

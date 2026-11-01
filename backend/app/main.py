@@ -40,3 +40,8 @@ app.include_router(merchants.router)
 @app.get("/")
 async def root():
     return {"name": "DhanRakshak", "docs": "/docs", "health": "/api/health"}
+
+
+@app.get("/healthz", tags=["health"])
+async def liveness():
+    return {"status": "ok"}

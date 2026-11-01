@@ -13,9 +13,5 @@ def get_llm() -> AsyncGroq:
 
 
 async def ping() -> str:
-    resp = await get_llm().chat.completions.create(
-        model=get_settings().groq_model,
-        messages=[{"role": "user", "content": "Reply with the single word: pong"}],
-        max_completion_tokens=256,
-    )
-    return (resp.choices[0].message.content or "").strip()
+    models = await get_llm().models.list()
+    return f"models available: {len(getattr(models, 'data', []))}"

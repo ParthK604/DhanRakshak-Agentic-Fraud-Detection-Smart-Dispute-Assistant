@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.config import get_settings
 from app.agents.dispute_graph import chat
@@ -14,6 +14,7 @@ from app.services.dispute_evidence import build_evidence_pack, find_duplicates, 
 from app.services.dispute_filing import sync_status
 from app.services.dispute_steps import resolution_steps
 from app.services.refunds import calculate_refund
+from app.services.rate_limit import enforce_rate_limit
 
 router = APIRouter(prefix="/api/disputes", tags=["disputes"])
 
@@ -56,7 +57,7 @@ async def analyze(request: AnalyzeRequest) -> ChatResponse:
     )
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(enforce_rate_limit)])
 async def dispute_chat(request: ChatRequest) -> ChatResponse:
     """Run one stateful dispute-assistant turn. Filing requires action=confirm."""
     return await chat(request)

@@ -9,6 +9,7 @@
 | 5 | Layer 3: merchant trust scoring  | DONE |
 | 6 | Next.js dashboard with AG Grid  | PARTIAL |
 | 7 | Postman collection, Render deploy, (APIMatic) | todo |
+| 7B | Render Blueprint, production hardening, Postman | SHIPPED |
 | 8 | Polish, README, tests, demo video, Devpost submission | todo |
 
 ## Phase log
@@ -65,3 +66,14 @@
 - Known gaps: transaction-prefill routing, persistent column layouts/saved
   views, some advanced grid filters, and full browser/runtime validation still
   need follow-up. Backend behavior was not changed in Phase 6.
+
+### Phase 7B
+- Shipped `/healthz`, cached `/api/health`, a Groq models-list credential check,
+  per-IP LLM endpoint quota protection, frontend 429 messaging, Render Blueprint
+  and deployment evidence, an optional paid-plan maintenance script, and an
+  OpenAPI-generated Postman collection with local/Render environments.
+- Deviation: APIMatic was dropped as requested. The Blueprint cron block remains
+  commented because Render cron jobs do not have a free tier.
+- Known issues: Render dashboard application, live deploy, Vercel environment
+  configuration, and Postman Runner results require the owner's credentials.
+  Free-tier cold starts and the shared AI quota remain demo-day risks.

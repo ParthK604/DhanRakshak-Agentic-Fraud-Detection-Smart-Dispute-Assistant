@@ -1,0 +1,1533 @@
+{
+  "info": {
+    "name": "DhanRakshak",
+    "_postman_id": "dhanrakshak-phase-7b",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "demo_user_id",
+      "value": "demo-user-1"
+    },
+    {
+      "key": "txn_id",
+      "value": "seed-netflix-duplicate-1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Story",
+      "item": [
+        {
+          "name": "Liveness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/healthz"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Transaction Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/transactions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('paged response has items and total', function () { const body = pm.response.json(); pm.expect(body).to.have.property('items'); pm.expect(body).to.have.property('total'); });",
+                  "const body = pm.response.json(); if (body.items.length) pm.collectionVariables.set('txn_id', body.items[0].txn_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Score Existing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/risk/score",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"txn_id\": \"{{txn_id}}\",\n  \"force\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Score Incoming",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/risk/score-transaction",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"txn_id\": \"postman-suspicious-1\",\n  \"user_id\": \"{{demo_user_id}}\",\n  \"amount\": 1250,\n  \"currency\": \"USD\",\n  \"merchant_name\": \"Northstar Electronics\",\n  \"country\": \"US\",\n  \"payee_email\": \"orders@example.com\",\n  \"direction\": \"outgoing\",\n  \"timestamp\": \"2026-01-15T12:00:00Z\",\n  \"status\": \"PENDING\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dispute Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/disputes/chat",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{demo_user_id}}\",\n  \"session_id\": null,\n  \"message\": \"I was charged twice for Netflix\",\n  \"action\": null,\n  \"payload\": null\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('chat has a reply', function () { pm.expect(pm.response.json()).to.have.property('reply'); });",
+                  "pm.collectionVariables.set('session_id', pm.response.json().session_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirm dispute submission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/disputes/chat",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{demo_user_id}}\",\n  \"session_id\": \"{{session_id}}\",\n  \"message\": null,\n  \"action\": \"confirm\",\n  \"payload\": null\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('chat has a reply', function () { pm.expect(pm.response.json()).to.have.property('reply'); });",
+                  "pm.collectionVariables.set('session_id', pm.response.json().session_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trust",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/merchants/trust",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchant_name\": \"Northstar Electronics\",\n  \"refresh\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('trust response has a score', function () { pm.expect(pm.response.json()).to.have.property('trust_score'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Precheck",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/merchants/precheck",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{demo_user_id}}\",\n  \"merchant_name\": \"Flash Prize Outlet\",\n  \"merchant_url\": null,\n  \"amount\": 299,\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('precheck has a verdict', function () { pm.expect(pm.response.json()).to.have.property('combined_verdict'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "disputes",
+      "item": [
+        {
+          "name": "Debug deterministic dispute analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/disputes/analyze",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dispute Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/disputes/chat",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{demo_user_id}}\",\n  \"session_id\": null,\n  \"message\": \"I was charged twice for Netflix\",\n  \"action\": null,\n  \"payload\": null\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('chat has a reply', function () { pm.expect(pm.response.json()).to.have.property('reply'); });",
+                  "pm.collectionVariables.set('session_id', pm.response.json().session_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Disputes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/disputes"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('disputes expose submission mode', function () { const body = pm.response.json(); if (body.items.length) pm.expect(body.items[0]).to.have.property('submission_mode'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dispute Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/disputes/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/disputes/sessions/{session_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Dispute",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/disputes/{dispute_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sync Dispute Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/disputes/{dispute_id}/sync-status",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Advance Prepared Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/disputes/{dispute_id}/advance",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "health",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Liveness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/healthz"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "merchants",
+      "item": [
+        {
+          "name": "Debug merchant trust signals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/merchants/signals",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trust",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/merchants/trust",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchant_name\": \"Northstar Electronics\",\n  \"refresh\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('trust response has a score', function () { pm.expect(pm.response.json()).to.have.property('trust_score'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Precheck",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/merchants/precheck",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{demo_user_id}}\",\n  \"merchant_name\": \"Flash Prize Outlet\",\n  \"merchant_url\": null,\n  \"amount\": 299,\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('precheck has a verdict', function () { pm.expect(pm.response.json()).to.have.property('combined_verdict'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trust Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/merchants/trust-batch",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  \"Northstar Electronics\",\n  \"Flash Prize Outlet\"\n]"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('trust batch has scores', function () { const body = pm.response.json(); if (body.length) pm.expect(body[0]).to.have.property('trust_score'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Merchants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/merchants"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('paged response has items and total', function () { const body = pm.response.json(); pm.expect(body).to.have.property('items'); pm.expect(body).to.have.property('total'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Merchant Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/merchants/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Merchant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/merchants/{merchant_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "misc",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "risk",
+      "item": [
+        {
+          "name": "Debug deterministic risk signals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/risk/signals",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Score Existing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/risk/score",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"txn_id\": \"{{txn_id}}\",\n  \"force\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Score Incoming",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/risk/score-transaction",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"txn_id\": \"postman-suspicious-1\",\n  \"user_id\": \"{{demo_user_id}}\",\n  \"amount\": 1250,\n  \"currency\": \"USD\",\n  \"merchant_name\": \"Northstar Electronics\",\n  \"country\": \"US\",\n  \"payee_email\": \"orders@example.com\",\n  \"direction\": \"outgoing\",\n  \"timestamp\": \"2026-01-15T12:00:00Z\",\n  \"status\": \"PENDING\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Score Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/risk/score-batch",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{demo_user_id}}\",\n  \"limit\": 10,\n  \"only_unscored\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Scores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/risk/scores"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('paged response has items and total', function () { const body = pm.response.json(); pm.expect(body).to.have.property('items'); pm.expect(body).to.have.property('total'); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Score",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/risk/scores/{txn_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/risk/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "transactions",
+      "item": [
+        {
+          "name": "List Transaction Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/transactions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('paged response has items and total', function () { const body = pm.response.json(); pm.expect(body).to.have.property('items'); pm.expect(body).to.have.property('total'); });",
+                  "const body = pm.response.json(); if (body.items.length) pm.collectionVariables.set('txn_id', body.items[0].txn_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Transaction Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/transactions/{txn_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sync Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/transactions/sync",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seed Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/transactions/seed",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset Seed Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/transactions/seed/reset",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Other endpoints",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Transaction Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/transactions/{txn_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sync Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/transactions/sync",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seed Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/transactions/seed",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset Seed Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/transactions/seed/reset",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Debug deterministic risk signals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/risk/signals",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Score Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/risk/score-batch",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{demo_user_id}}\",\n  \"limit\": 10,\n  \"only_unscored\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Scores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/risk/scores"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('paged response has items and total', function () { const body = pm.response.json(); pm.expect(body).to.have.property('items'); pm.expect(body).to.have.property('total'); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Score",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/risk/scores/{txn_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('score is between 0 and 100', function () { pm.expect(pm.response.json().risk_score).to.be.within(0, 100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/risk/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Debug deterministic dispute analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/disputes/analyze",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Disputes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/disputes"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('disputes expose submission mode', function () { const body = pm.response.json(); if (body.items.length) pm.expect(body.items[0]).to.have.property('submission_mode'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dispute Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/disputes/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/disputes/sessions/{session_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Dispute",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/disputes/{dispute_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sync Dispute Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/disputes/{dispute_id}/sync-status",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Advance Prepared Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/disputes/{dispute_id}/advance",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Debug merchant trust signals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/merchants/signals",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trust Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/merchants/trust-batch",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  \"Northstar Electronics\",\n  \"Flash Prize Outlet\"\n]"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('trust batch has scores', function () { const body = pm.response.json(); if (body.length) pm.expect(body[0]).to.have.property('trust_score'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Merchants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/merchants"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "pm.test('paged response has items and total', function () { const body = pm.response.json(); pm.expect(body).to.have.property('items'); pm.expect(body).to.have.property('total'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Merchant Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/merchants/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Merchant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/merchants/{merchant_id}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is successful', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
