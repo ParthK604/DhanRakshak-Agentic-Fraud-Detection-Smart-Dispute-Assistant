@@ -114,8 +114,31 @@ Every data view (Transactions, Disputes, Merchants) is an AG Grid:
 -  [`postman/`](postman/) contains a collection generated from the OpenAPI spec, with local and Render environments and test scripts for the main flows (health, transactions, risk scoring, dispute chat, merchant trust and pre-payment check).
 
 ---
-
-
+ 
+## Project structure
+ 
+```
+.
++-- backend/
+|   +-- app/
+|   |   +-- main.py, config.py, db.py
+|   |   +-- routers/        health, transactions, risk, disputes, merchants
+|   |   +-- services/       paypal client, LLM client, risk signals, dispute evidence,
+|   |   |                   refunds, letters, merchant research, safe fetcher
+|   |   +-- agents/         risk_graph, dispute_graph, merchant_graph (LangGraph)
+|   |   +-- models/         Pydantic schemas
+|   |   +-- repositories/   MongoDB access
+|   +-- scripts/            seed_data, probe_paypal, generate_sandbox_activity,
+|   |                       eval_risk, eval_disputes, eval_merchants, demo_dispute_chat
+|   +-- tests/
+|   +-- requirements.txt
++-- frontend/               Next.js app (pages, components, lib)
++-- context.md  architecture.md  ai_history.md  phase_history.md
++-- EVAL_RISK.md  EVAL_DISPUTES.md  EVAL_MERCHANTS.md
++-- render.yaml  postman/   [EDIT: keep only if present]
++-- LICENSE
+```
+ 
 ---
 
 ## Setup
